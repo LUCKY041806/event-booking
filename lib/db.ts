@@ -1,25 +1,42 @@
 import mongoose from "mongoose";
 
-export const localConnection = mongoose.createConnection(
-  process.env.LOCAL_MONGODB_URI!
-);
+const MONGODB_URI = process.env.MONGODB_URI as string;
 
-export const atlasConnection = mongoose.createConnection(
-  process.env.ATLAS_MONGODB_URI!
-);
+if (!MONGODB_URI) {
+  throw new Error("Please define the MONGODB_URI environment variable");
+}
 
-localConnection.on("connected", () => {
-  console.log("✅ Local MongoDB Connected");
-});
+type MongooseCache = {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+};
 
-atlasConnection.on("connected", () => {
-  console.log("✅ Atlas MongoDB Connected");
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var mongooseCache: MongooseCache | undefined;
+}
 
-localConnection.on("error", (err) => {
-  console.error("❌ Local MongoDB Error:", err);
-});
+// Initialize cache safely
+const globalWithMongoose = global as typeof global & {
+  mongooseCache?: MongooseCache;
+};
 
-atlasConnection.on("error", (err) => {
-  console.error("❌ Atlas MongoDB Error:", err);
-});
+if (!globalWithMongoose.mongooseCache) {
+  globalWithMongoose.mongooseCache = { conn: null, promise: null };
+}
+
+const cached = globalWithMongoose.mongooseCache;
+
+export async function connectDB() {
+  if (cached.conn) return cached.conn;
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGODB_URI).then((m) => {
+      console.log("✅ MongoDB Connected");
+      return m;
+    });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
+}

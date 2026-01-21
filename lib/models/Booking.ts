@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { localConnection, atlasConnection } from "../db";
 
 const BookingSchema = new mongoose.Schema({
   eventName: String,
@@ -14,10 +13,5 @@ const BookingSchema = new mongoose.Schema({
   },
 });
 
-export const LocalBooking =
-  localConnection.models.Booking ||
-  localConnection.model("Booking", BookingSchema);
-
-export const AtlasBooking =
-  atlasConnection.models.Booking ||
-  atlasConnection.model("Booking", BookingSchema);
+export default mongoose.models.Booking ||
+  mongoose.model("Booking", BookingSchema);
